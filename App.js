@@ -1,75 +1,133 @@
 import React, { useRef } from "react";
-import { Animated, PanResponder } from "react-native";
+import { Animated, PanResponder, View } from "react-native";
 import styled from "styled-components/native";
+import { Ionicons } from "@expo/vector-icons";
 
 const Container = styled.View`
   flex: 1;
   justify-content: center;
   align-items: center;
+  background-color: #00a8ff;
 `;
 
-const Box = styled.View`
-  background-color: tomato;
-  width: 200px;
-  height: 200px;
+const Card = styled(Animated.createAnimatedComponent(View))`
+  background-color: white;
+  width: 300px;
+  height: 300px;
+  justify-content: center;
+  align-items: center;
+  border-radius: 20px;
+  box-shadow: 1px 1px 5px rgba(0, 0, 0, 0.2);
+  position: absolute;
 `;
 
-const AnimatedBox = Animated.createAnimatedComponent(Box);
+const Btn = styled.TouchableOpacity`
+  margin: 0 10px;
+`;
+const BtnBox = styled.View`
+  flex-direction: row;
+  margin-top: 100px;
+  flex: 1;
+`;
+
+const CardBox = styled.View`
+  flex: 3;
+  justify-content: center;
+  align-items: center;
+`;
 
 export default function App() {
-  const position = useRef(
-    new Animated.ValueXY({
-      x: 0,
-      y: 0,
-    })
-  ).current;
-
-  const opacity = position.y.interpolate({
-    inputRange: [-250, 0, 250],
+  //value
+  const scale = useRef(new Animated.Value(1)).current;
+  const position = useRef(new Animated.Value(0)).current;
+  const rotation = position.interpolate({
+    inputRange: [-250, 250],
+    outputRange: ["-15deg", "15deg"],
+    //extrapolate: "clamp",
+  });
+  const secondScale = position.interpolate({
+    inputRange: [-300, 0, 300],
     outputRange: [1, 0.5, 1],
+    extrapolate: "clamp",
   });
 
-  const bgColor = position.y.interpolate({
-    inputRange: [-250, 250],
-    outputRange: ["rgb(255,99,71)", "rgb(71,166,255)"],
-  });
-
-  const border = position.y.interpolate({
-    inputRange: [-250, 250],
-    outputRange: [100, 0],
-  });
-
+  //Animations
+  const onPressIn = () =>
+    Animated.spring(scale, { toValue: 0.95, useNativeDriver: true }).start();
+  const onPressOut = () =>
+    Animated.spring(scale, { toValue: 1, useNativeDriver: true }).start();
+  const goCenter = () =>
+    Animated.spring(position, { toValue: 0, useNativeDriver: true }).start();
+  const goLeft = () =>
+    Animated.spring(position, {
+      toValue: -400,
+      tension: 5,
+      useNativeDriver: true,
+    }).start();
+  const goRight = () =>
+    Animated.spring(position, {
+      toValue: 400,
+      tension: 5,
+      useNativeDriver: true,
+    }).start();
+  //PanResponder
   const panResponder = useRef(
     PanResponder.create({
       onStartShouldSetPanResponder: () => true,
-      onPanResponderMove: (_, { dx, dy }) => {
-        position.setValue({
-          x: dx,
-          y: dy,
-        });
+      onPanResponderGrant: () => {
+        onPressIn();
       },
-      onPanResponderRelease: (evt, gestureState) => {
-        Animated.spring(position, {
-          toValue: {
-            x: 0,
-            y: 0,
-          },
-          useNativeDriver: false,
-        }).start();
+      onPanResponderMove: (_, { dx }) => {
+        position.setValue(dx);
+      },
+      onPanResponderRelease: (_, { dx }) => {
+        if (dx < -250) {
+          goLeft();
+        } else if (dx > 250) {
+          goRight();
+        } else {
+          onPressOut();
+          goCenter();
+        }
       },
     })
   ).current;
+
+  //
+  const closePress = () => {
+    goLeft();
+  };
+  const checkPress = () => {
+    goRight();
+  };
+
   return (
     <Container>
-      <AnimatedBox
-        {...panResponder.panHandlers}
-        style={{
-          borderRadius: border,
-          opacity,
-          backgroundColor: bgColor,
-          transform: position.getTranslateTransform(),
-        }}
-      />
+      <CardBox>
+        <Card style={{ transform: [{ scale: secondScale }] }}>
+          <Ionicons name="beer-outline" color="#8e44ad" size={100} />
+        </Card>
+        <Card
+          {...panResponder.panHandlers}
+          style={{
+            transform: [
+              { scale },
+              { translateX: position },
+              { rotateZ: rotation },
+            ],
+          }}
+        >
+          <Ionicons name="pizza" color="#8e44ad" size={100} />
+        </Card>
+      </CardBox>
+      <BtnBox>
+        <Btn onPress={closePress}>
+          <Ionicons name="close-circle" color="white" size={58} />
+        </Btn>
+        <Btn onPress={checkPress}>
+          <Ionicons name="checkmark-circle" color="white" size={58} />
+        </Btn>
+      </BtnBox>
     </Container>
   );
 }
