@@ -1,10 +1,5 @@
-import React, { useRef, useState } from "react";
-import {
-  Animated,
-  Dimensions,
-  Pressable,
-  TouchableOpacity,
-} from "react-native";
+import React, { useRef } from "react";
+import { Animated, PanResponder } from "react-native";
 import styled from "styled-components/native";
 
 const Container = styled.View`
@@ -13,7 +8,7 @@ const Container = styled.View`
   align-items: center;
 `;
 
-const Box = styled.Pressable`
+const Box = styled.View`
   background-color: tomato;
   width: 200px;
   height: 200px;
@@ -21,51 +16,14 @@ const Box = styled.Pressable`
 
 const AnimatedBox = Animated.createAnimatedComponent(Box);
 
-const { width: SCRENN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get("window");
-
 export default function App() {
   const position = useRef(
     new Animated.ValueXY({
-      x: -SCRENN_WIDTH / 2 + 100,
-      y: -SCREEN_HEIGHT / 2 + 100,
+      x: 0,
+      y: 0,
     })
   ).current;
-  const topLeft = Animated.timing(position, {
-    toValue: {
-      x: -SCRENN_WIDTH / 2 + 100,
-      y: -SCREEN_HEIGHT / 2 + 100,
-    },
-    useNativeDriver: false,
-  });
 
-  const bottomLeft = Animated.timing(position, {
-    toValue: {
-      x: -SCRENN_WIDTH / 2 + 100,
-      y: SCREEN_HEIGHT / 2 - 100,
-    },
-    useNativeDriver: false,
-  });
-
-  const bottomRight = Animated.timing(position, {
-    toValue: {
-      x: SCRENN_WIDTH / 2 - 100,
-      y: SCREEN_HEIGHT / 2 - 100,
-    },
-    useNativeDriver: false,
-  });
-
-  const topRight = Animated.timing(position, {
-    toValue: {
-      x: SCRENN_WIDTH / 2 - 100,
-      y: -SCREEN_HEIGHT / 2 + 100,
-    },
-    useNativeDriver: false,
-  });
-  const moveUp = () => {
-    Animated.loop(
-      Animated.sequence([bottomLeft, bottomRight, topRight, topLeft])
-    ).start();
-  };
   const opacity = position.y.interpolate({
     inputRange: [-250, 0, 250],
     outputRange: [1, 0.5, 1],
@@ -81,15 +39,35 @@ export default function App() {
     outputRange: [100, 0],
   });
 
+  const panResponder = useRef(
+    PanResponder.create({
+      onStartShouldSetPanResponder: () => true,
+      onPanResponderMove: (_, { dx, dy }) => {
+        position.setValue({
+          x: dx,
+          y: dy,
+        });
+      },
+      onPanResponderRelease: (evt, gestureState) => {
+        Animated.spring(position, {
+          toValue: {
+            x: 0,
+            y: 0,
+          },
+          useNativeDriver: false,
+        }).start();
+      },
+    })
+  ).current;
   return (
     <Container>
       <AnimatedBox
-        onPress={moveUp}
+        {...panResponder.panHandlers}
         style={{
           borderRadius: border,
           opacity,
           backgroundColor: bgColor,
-          transform: [...position.getTranslateTransform()],
+          transform: position.getTranslateTransform(),
         }}
       />
     </Container>
