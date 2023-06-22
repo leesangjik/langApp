@@ -1,133 +1,102 @@
-import React, { useRef } from "react";
-import { Animated, PanResponder, View } from "react-native";
+import React, { useRef, useState } from "react";
+import { Animated, PanResponder, Text, View } from "react-native";
 import styled from "styled-components/native";
 import { Ionicons } from "@expo/vector-icons";
+import icons from "./icons";
+
+const BLACK_COLOR = "#1e272e";
+const GREY = "#485460";
+const GREEN = "#2ecc71";
+const RED = "#e74c3c";
 
 const Container = styled.View`
   flex: 1;
-  justify-content: center;
-  align-items: center;
-  background-color: #00a8ff;
+  background-color: ${BLACK_COLOR};
 `;
 
-const Card = styled(Animated.createAnimatedComponent(View))`
-  background-color: white;
-  width: 300px;
-  height: 300px;
-  justify-content: center;
-  align-items: center;
-  border-radius: 20px;
-  box-shadow: 1px 1px 5px rgba(0, 0, 0, 0.2);
-  position: absolute;
-`;
-
-const Btn = styled.TouchableOpacity`
-  margin: 0 10px;
-`;
-const BtnBox = styled.View`
-  flex-direction: row;
-  margin-top: 100px;
+const Edge = styled.View`
   flex: 1;
+  justify-content: center;
+  align-items: center;
 `;
-
-const CardBox = styled.View`
+const WordContainer = styled(Animated.createAnimatedComponent(View))`
+  width: 100px;
+  height: 100px;
+  justify-content: center;
+  align-items: center;
+  background-color: ${GREY};
+  border-radius: 50px;
+`;
+const Word = styled.Text`
+  font-size: 30px;
+  color: ${(props) => props.color};
+`;
+const Center = styled.View`
   flex: 3;
   justify-content: center;
   align-items: center;
 `;
-
+const IconCard = styled(Animated.createAnimatedComponent(View))`
+  background-color: white;
+  padding: 10px;
+  border-radius: 10px;
+`;
 export default function App() {
   //value
   const scale = useRef(new Animated.Value(1)).current;
-  const position = useRef(new Animated.Value(0)).current;
-  const rotation = position.interpolate({
-    inputRange: [-250, 250],
-    outputRange: ["-15deg", "15deg"],
-    //extrapolate: "clamp",
-  });
-  const secondScale = position.interpolate({
-    inputRange: [-300, 0, 300],
-    outputRange: [1, 0.5, 1],
-    extrapolate: "clamp",
-  });
-
+  const position = useRef(new Animated.ValueXY({ x: 0, y: 0 })).current;
   //Animations
-  const onPressIn = () =>
-    Animated.spring(scale, { toValue: 0.95, useNativeDriver: true }).start();
-  const onPressOut = () =>
-    Animated.spring(scale, { toValue: 1, useNativeDriver: true }).start();
-  const goCenter = () =>
-    Animated.spring(position, { toValue: 0, useNativeDriver: true }).start();
-  const goLeft = () =>
-    Animated.spring(position, {
-      toValue: -400,
-      tension: 5,
-      useNativeDriver: true,
-    }).start();
-  const goRight = () =>
-    Animated.spring(position, {
-      toValue: 400,
-      tension: 5,
-      useNativeDriver: true,
-    }).start();
+  const onPressIn = Animated.spring(scale, {
+    toValue: 0.9,
+    useNativeDriver: true,
+  });
+  const onPressOut = Animated.spring(scale, {
+    toValue: 1,
+    useNativeDriver: true,
+  });
+  const goHome = Animated.spring(position, {
+    toValue: 0,
+    useNativeDriver: true,
+  });
   //PanResponder
   const panResponder = useRef(
     PanResponder.create({
       onStartShouldSetPanResponder: () => true,
+      onPanResponderMove: (_, { dx, dy }) => {
+        position.setValue({ x: dx, y: dy });
+      },
       onPanResponderGrant: () => {
-        onPressIn();
+        onPressIn.start();
       },
-      onPanResponderMove: (_, { dx }) => {
-        position.setValue(dx);
-      },
-      onPanResponderRelease: (_, { dx }) => {
-        if (dx < -250) {
-          goLeft();
-        } else if (dx > 250) {
-          goRight();
-        } else {
-          onPressOut();
-          goCenter();
-        }
+      onPanResponderRelease: () => {
+        Animated.parallel([onPressOut, goHome]).start();
       },
     })
   ).current;
-
-  //
-  const closePress = () => {
-    goLeft();
-  };
-  const checkPress = () => {
-    goRight();
-  };
+  //state
 
   return (
     <Container>
-      <CardBox>
-        <Card style={{ transform: [{ scale: secondScale }] }}>
-          <Ionicons name="beer-outline" color="#8e44ad" size={100} />
-        </Card>
-        <Card
+      <Edge>
+        <WordContainer>
+          <Word color={GREEN}>Know</Word>
+        </WordContainer>
+      </Edge>
+      <Center>
+        <IconCard
           {...panResponder.panHandlers}
           style={{
-            transform: [
-              { scale },
-              { translateX: position },
-              { rotateZ: rotation },
-            ],
+            transform: [...position.getTranslateTransform(), { scale }],
           }}
         >
-          <Ionicons name="pizza" color="#8e44ad" size={100} />
-        </Card>
-      </CardBox>
-      <BtnBox>
-        <Btn onPress={closePress}>
-          <Ionicons name="close-circle" color="white" size={58} />
-        </Btn>
-        <Btn onPress={checkPress}>
-          <Ionicons name="checkmark-circle" color="white" size={58} />
-        </Btn>
-      </BtnBox>
+          <Ionicons name="beer" color={GREY} size={80} />
+        </IconCard>
+      </Center>
+      <Edge>
+        <WordContainer>
+          <Word color={RED}>Don't Know</Word>
+        </WordContainer>
+      </Edge>
     </Container>
   );
 }
